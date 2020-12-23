@@ -1208,7 +1208,7 @@ void ServRestartThread::run(void *ptr)
 	dev->mem_devices_interface(map_dev_inter);
 
 //
-// Destroy and recreate the multi attribute object
+// Destroy and recreate the multi attribute objects
 //
 
 	MultiAttribute *tmp_ptr;
@@ -1222,6 +1222,20 @@ void ServRestartThread::run(void *ptr)
 	}
 	delete dev->get_device_attr();
 	dev->set_device_attr(tmp_ptr);
+
+
+	MultiLocalAttribute *tmp_ptr_local;
+	try
+	{
+		tmp_ptr_local = new MultiLocalAttribute(dev->get_name(),dev->get_device_class(),dev);
+	}
+	catch (Tango::DevFailed &)
+	{
+		throw;
+	}
+	delete dev->get_device_local_attr();
+	dev->set_device_local_attr(tmp_ptr_local);
+
 	dev->add_state_status_attrs();
 
 //

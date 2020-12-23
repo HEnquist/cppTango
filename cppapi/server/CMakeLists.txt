@@ -19,6 +19,7 @@ set(SOURCES attrdesc.cpp
             device_5.cpp
             deviceclass.cpp
             devicelog.cpp
+            devicelevelattribute.cpp
             devintr.cpp
             dintrthread.cpp
             dserver.cpp
@@ -37,6 +38,7 @@ set(SOURCES attrdesc.cpp
             logging.cpp
             logstream.cpp
             multiattribute.cpp
+            multilocalattribute.cpp
             notifdeventsupplier.cpp
             pipe.cpp
             pollcmds.cpp
@@ -82,6 +84,7 @@ set(HEADERS attrdesc.h
             device_4.h
             device_5.h
             deviceclass.h
+            devicelevelattribute.h
             devintr.h
             dintrthread.h
             dserver.h
@@ -98,6 +101,7 @@ set(HEADERS attrdesc.h
             logging.h
             logstream.h
             multiattribute.h
+            multilocalattribute.h
             ntservice.h
             pipedesc.h
             pollcmds.h

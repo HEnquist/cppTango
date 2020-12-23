@@ -1,9 +1,9 @@
 //+==================================================================================================================
 //
-// file :               MultiAttribute.cpp
+// file :               MultiLocalAttribute.cpp
 //
-// description :        C++ source code for the MultiAttribute class. This class is used to manage attribute.
-//						A Tango Device object instance has one MultiAttribute object which is an aggregate of
+// description :        C++ source code for the MultiLocalAttribute class. This class is used to manage attribute.
+//						A Tango Device object instance has one MultiLocalAttribute object which is an aggregate of
 //						Attribute or WAttribute objects
 //
 // project :            TANGO
@@ -37,8 +37,8 @@
 
 #include <tango.h>
 #include <eventsupplier.h>
-#include <multiattribute.h>
-#include <classattribute.h>
+#include <multilocalattribute.h>
+#include <devicelevelattribute.h>
 
 #include <functional>
 #include <algorithm>
@@ -73,10 +73,10 @@ static OptAttrProp Tango_OptAttrProp[] = {
 //+------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::MultiAttribute
+//		MultiLocalAttribute::MultiLocalAttribute
 //
 // description :
-//		Constructor for the MultiAttribute class from the device device name and a pointer to the DeviceClass object
+//		Constructor for the MultiLocalAttribute class from the device device name and a pointer to the DeviceClass object
 //
 // argument :
 //		in :
@@ -86,12 +86,13 @@ static OptAttrProp Tango_OptAttrProp[] = {
 //
 //------------------------------------------------------------------------------------------------------------------
 
-MultiAttribute::MultiAttribute(std::string &dev_name,DeviceClass *dev_class_ptr,DeviceImpl *dev)
-:ext(new MultiAttribute::MultiAttributeExt)
+MultiLocalAttribute::MultiLocalAttribute(std::string &dev_name,DeviceClass *dev_class_ptr,DeviceImpl *dev)
+:ext(new MultiLocalAttribute::MultiLocalAttributeExt)
 {
 	long i;
-	cout4 << "Entering MultiAttribute class constructor for device " << dev_name << std::endl;
+	cout4 << "Entering MultiLocalAttribute class constructor for device " << dev_name << std::endl;
 
+    local_attr_list = new MultiDeviceLevelAttribute();
 //
 // Retrieve attr name list
 //
@@ -144,7 +145,7 @@ MultiAttribute::MultiAttribute(std::string &dev_name,DeviceClass *dev_class_ptr,
 
 				Except::throw_exception((const char *)API_DatabaseAccess,
 				                	o.str(),
-				                	(const char *)"MultiAttribute::MultiAttribute");
+				                	(const char *)"MultiLocalAttribute::MultiLocalAttribute");
 			}
 		}
 
@@ -222,7 +223,7 @@ MultiAttribute::MultiAttribute(std::string &dev_name,DeviceClass *dev_class_ptr,
 					try
 					{
 						fwdattr.get_root_conf(dev_name,dev);
-						fwdattr.remove_useless_prop(prop_list,dev_name,this);
+						//fwdattr.remove_useless_prop(prop_list,dev_name,this);
 						add_user_default(prop_list,def_user_prop);
 						add_default(prop_list,dev_name,attr.get_name(),attr.get_type());
 					}
@@ -341,21 +342,21 @@ MultiAttribute::MultiAttribute(std::string &dev_name,DeviceClass *dev_class_ptr,
 		check_associated(i,dev_name);
 	}
 
-	cout4 << "Leaving MultiAttribute class constructor" << std::endl;
+	cout4 << "Leaving MultiLocalAttribute class constructor" << std::endl;
 }
 
 //+----------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::~MultiAttribute
+//		MultiLocalAttribute::~MultiLocalAttribute
 //
 // description :
-//		Destructor for the MultiAttribute class. It simply delete all the Attribute object stored in its
+//		Destructor for the MultiLocalAttribute class. It simply delete all the Attribute object stored in its
 //		attr_list data member
 //
 //-----------------------------------------------------------------------------------------------------------------
 
-MultiAttribute::~MultiAttribute()
+MultiLocalAttribute::~MultiLocalAttribute()
 {
 	for(unsigned long i = 0;i < attr_list.size();i++)
 		delete attr_list[i];
@@ -365,7 +366,7 @@ MultiAttribute::~MultiAttribute()
 //+-----------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::concat
+//		MultiLocalAttribute::concat
 //
 // description :
 //		Concatenate porperties defined at the class level and at the device level. Prperties defined at the device
@@ -381,7 +382,7 @@ MultiAttribute::~MultiAttribute()
 //------------------------------------------------------------------------------------------------------------------
 
 
-void MultiAttribute::concat(std::vector<AttrProperty> &dev_prop,
+void MultiLocalAttribute::concat(std::vector<AttrProperty> &dev_prop,
 						    std::vector<AttrProperty> &class_prop,
 							std::vector<AttrProperty> &result)
 {
@@ -416,7 +417,7 @@ void MultiAttribute::concat(std::vector<AttrProperty> &dev_prop,
 
 //+------------------------------------------------------------------------------------------------------------------
 //
-// method : 		MultiAttribute::add_default
+// method : 		MultiLocalAttribute::add_default
 //
 // description :
 //		Add default value for optional property if they are not defined
@@ -430,7 +431,7 @@ void MultiAttribute::concat(std::vector<AttrProperty> &dev_prop,
 //
 //--------------------------------------------------------------------------
 
-void MultiAttribute::add_default(std::vector<AttrProperty> &prop_list, TANGO_UNUSED(std::string &dev_name),
+void MultiLocalAttribute::add_default(std::vector<AttrProperty> &prop_list, TANGO_UNUSED(std::string &dev_name),
 				 std::string &att_name,long att_data_type)
 {
 
@@ -500,7 +501,7 @@ void MultiAttribute::add_default(std::vector<AttrProperty> &prop_list, TANGO_UNU
 //+------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::add_user_default
+//		MultiLocalAttribute::add_user_default
 //
 // description :
 //		Add default value for optional property if they are not defined
@@ -512,7 +513,7 @@ void MultiAttribute::add_default(std::vector<AttrProperty> &prop_list, TANGO_UNU
 //
 //-------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::add_user_default(std::vector<AttrProperty> &prop_list,std::vector<AttrProperty> &user_default)
+void MultiLocalAttribute::add_user_default(std::vector<AttrProperty> &prop_list,std::vector<AttrProperty> &user_default)
 {
 
 //
@@ -537,7 +538,7 @@ void MultiAttribute::add_user_default(std::vector<AttrProperty> &prop_list,std::
 //+-----------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::check_associated
+//		MultiLocalAttribute::check_associated
 //
 // description :
 //		Check if the writable_attr_name property is set and in this case, check if the associated attribute exists
@@ -550,7 +551,7 @@ void MultiAttribute::add_user_default(std::vector<AttrProperty> &prop_list,std::
 //
 //------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::check_associated(long index, std::string &dev_name)
+void MultiLocalAttribute::check_associated(long index, std::string &dev_name)
 {
 	Attribute& attribute = *attr_list[index];
 	const AttrWriteType write_type = attribute.get_writable();
@@ -577,7 +578,7 @@ void MultiAttribute::check_associated(long index, std::string &dev_name)
 		Except::throw_exception(
 			API_AttrOptProp,
 			o.str().c_str(),
-			"MultiAttribute::check_associated");
+			"MultiLocalAttribute::check_associated");
 	}
 
 	Attribute& assoc_attribute = *attr_list[assoc_index];
@@ -593,7 +594,7 @@ void MultiAttribute::check_associated(long index, std::string &dev_name)
 		Except::throw_exception(
 			API_AttrOptProp,
 			o.str().c_str(),
-			"MultiAttribute::check_associated");
+			"MultiLocalAttribute::check_associated");
 	}
 
 	if (attribute.get_data_type() != assoc_attribute.get_data_type())
@@ -606,7 +607,7 @@ void MultiAttribute::check_associated(long index, std::string &dev_name)
 		Except::throw_exception(
 			API_AttrOptProp,
 			o.str().c_str(),
-			"MultiAttribute::check_associated");
+			"MultiLocalAttribute::check_associated");
 	}
 
 	attribute.set_assoc_ind(assoc_index);
@@ -615,7 +616,7 @@ void MultiAttribute::check_associated(long index, std::string &dev_name)
 //+-----------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::check_idl_release
+//		MultiLocalAttribute::check_idl_release
 //
 // description :
 //		Check some features according to which IDL release the device implement. This can not be done in
@@ -632,7 +633,7 @@ void MultiAttribute::check_associated(long index, std::string &dev_name)
 //
 //------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::check_idl_release(DeviceImpl *dev)
+void MultiLocalAttribute::check_idl_release(DeviceImpl *dev)
 {
 	int idl_version = dev->get_dev_idl_version();
 	size_t nb_attr = attr_list.size();
@@ -653,7 +654,7 @@ void MultiAttribute::check_idl_release(DeviceImpl *dev)
 				ss << "Attribute " << attr_list[i]->get_name() << " has a DEV_ENUM data type.\n";
 				ss << "This is supported oonly for device inheriting from IDL 5 or more";
 
-				Except::throw_exception(API_NotSupportedFeature,ss.str(),"MultiAttribute::check_idl_release()");
+				Except::throw_exception(API_NotSupportedFeature,ss.str(),"MultiLocalAttribute::check_idl_release()");
 			}
 			catch (Tango::DevFailed &e)
 			{
@@ -692,7 +693,7 @@ void MultiAttribute::check_idl_release(DeviceImpl *dev)
 //+-------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::add_attribute
+//		MultiLocalAttribute::add_attribute
 //
 // description :
 //		Construct a new attribute object and add it to the device attribute list
@@ -705,28 +706,35 @@ void MultiAttribute::check_idl_release(DeviceImpl *dev)
 //
 //-------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::add_attribute(std::string &dev_name,DeviceClass *dev_class_ptr,long index)
+void MultiLocalAttribute::add_attribute(std::string &dev_name,DeviceClass *dev_class_ptr,long index, Attr *new_dev_attr)
 {
-	cout4 << "Entering MultiAttribute::add_attribute" << std::endl;
+	cout4 << "Entering MultiLocalAttribute::add_attribute" << std::endl;
 
 //
 // Retrieve device class attribute list
 //
 
-	std::vector<Attr *> &tmp_attr_list = dev_class_ptr->get_class_attr()->get_attr_list();
+	//std::vector<Attr *> &tmp_attr_list = dev_class_ptr->get_class_attr()->get_attr_list();
 
 //
 // Get device attribute properties
 // No need to implement a retry here (in case of db server restart) because the db reconnection
 // is forced by the get_property call executed during xxxClass construction before we reach this code.
 //
-
+    std::vector<Attr *> &temp_attr_list = local_attr_list->get_attr_list();
+    index = temp_attr_list.size();
+    temp_attr_list.push_back(new_dev_attr);
+    
+	cout4 << "------------aaaaaaaaaaaaaaaa" << std::endl;
 	Tango::Util *tg = Tango::Util::instance();
+	cout4 << "------------aaaaaaaaaaaaaaaa1" << std::endl;
 	Tango::DbData db_list;
 
 	if (tg->_UseDb == true)
 	{
-		db_list.push_back(DbDatum(tmp_attr_list[index]->get_name()));
+		cout4 << "------------aaaaaaaaaaaaaaaa2" << std::endl;
+		db_list.push_back(DbDatum(temp_attr_list[index]->get_name()));
+		cout4 << "------------aaaaaaaaaaaaaaaa3" << std::endl;
 		try
 		{
 			tg->get_database()->get_device_attribute_property(dev_name,db_list,tg->get_db_cache());
@@ -738,23 +746,25 @@ void MultiAttribute::add_attribute(std::string &dev_name,DeviceClass *dev_class_
 
 			Except::re_throw_exception(e,(const char *)API_DatabaseAccess,
 				       		 o.str(),
-				        	(const char *)"MultiAttribute::add_attribute");
+				        	(const char *)"MultiLocalAttribute::add_attribute");
 		}
 	}
 
 //
 // Get attribute class properties
 //
-
-	Attr &attr = dev_class_ptr->get_class_attr()->get_attr(tmp_attr_list[index]->get_name());
-	std::vector<AttrProperty> &class_prop = attr.get_class_properties();
-	std::vector<AttrProperty> &def_user_prop = attr.get_user_default_properties();
+	//cout4 << "------------bbbbbbbbbbbbbbbbbbbbbbb" << std::endl;
+	//Attr &attr = dev_class_ptr->get_class_attr()->get_attr(tmp_attr_list[index]->get_name());
+    //std::vector<Attr *> &temp_attr_list = local_attr_list->get_attr_list();
+    Attr &attr = *temp_attr_list[index];
+	//std::vector<AttrProperty> &class_prop = attr.get_class_properties();
+	//std::vector<AttrProperty> &def_user_prop = attr.get_user_default_properties();
 
 //
 // If the attribute has some properties defined at device level, build a vector of these properties
 //
-
-	std::vector<AttrProperty> dev_prop;
+	cout4 << "------------cccccccccccccccccccccc" << std::endl;
+	std::vector<AttrProperty> prop_list;
 
 	if (tg->_UseDb == true)
 	{
@@ -774,10 +784,10 @@ void MultiAttribute::add_attribute(std::string &dev_name,DeviceClass *dev_class_
                     tmp = tmp + ",";
 					tmp = tmp + db_list[ind].value_string[k];
 				}
-				dev_prop.push_back(AttrProperty(db_list[ind].name,tmp));
+				prop_list.push_back(AttrProperty(db_list[ind].name,tmp));
 			}
 			else
-				dev_prop.push_back(AttrProperty(db_list[ind].name,
+				prop_list.push_back(AttrProperty(db_list[ind].name,
 								db_list[ind].value_string[0]));
 			ind++;
 		}
@@ -786,66 +796,72 @@ void MultiAttribute::add_attribute(std::string &dev_name,DeviceClass *dev_class_
 //
 // Concatenate these two attribute properties levels
 //
-
-	std::vector<AttrProperty> prop_list;
-	concat(dev_prop,class_prop,prop_list);
-	add_user_default(prop_list,def_user_prop);
-	add_default(prop_list,dev_name,attr.get_name(),attr.get_type());
+	cout4 << "------------dddddddddddddddddddd" << std::endl;
+	//std::vector<AttrProperty> prop_list;
+	//concat(dev_prop,class_prop,prop_list);
+	//add_user_default(prop_list,def_user_prop);
+	//add_default(prop_list,dev_name,attr.get_name(),attr.get_type());
 
 //
 // Create an Attribute instance and insert it in the attribute list. If the device implement IDL 3
 // (with state and status as attributes), add it at the end of the list but before state and status.
 //
-
+	cout4 << "------------eeeeeeeeeeeeeeeee" << std::endl;
 	bool idl_3 = false;
 	std::vector<Attribute *>::iterator ite;
-	if ((attr_list.back())->get_name() == "Status")
-	{
-		idl_3 = true;
-		ite = attr_list.end();
-		ite = ite - 2;
-	}
+	//if ((attr_list.back())->get_name() == "Status")
+	//{
+	//	idl_3 = true;
+	//	ite = attr_list.end();
+	//	ite = ite - 2;
+	//}
 
 	if ((attr.get_writable() == Tango::WRITE) ||
 	    (attr.get_writable() == Tango::READ_WRITE))
 	{
-		if (idl_3 == false)
-		{
-			Attribute * new_attr = new WAttribute(prop_list,attr,dev_name,index);
-			add_attr(new_attr);
-			index = attr_list.size() - 1;
-		}
-		else
-		{
-			Attribute * new_attr = new WAttribute(prop_list,attr,dev_name,index);
-			attr_list.insert(ite,new_attr);
-			index = attr_list.size() - 3;
-			ext->put_attribute_in_map(new_attr,index);
-			ext->increment_state_and_status_indexes();
-		}
+        Attribute * new_attr = new WAttribute(prop_list,attr,dev_name,index);
+		add_attr(new_attr);
+		index = attr_list.size() - 1;
+		//if (idl_3 == false)
+		//{
+		//	Attribute * new_attr = new WAttribute(prop_list,attr,dev_name,index);
+		//	add_attr(new_attr);
+		//	index = attr_list.size() - 1;
+		//}
+		//else
+		//{
+		//	Attribute * new_attr = new WAttribute(prop_list,attr,dev_name,index);
+		//	attr_list.insert(ite,new_attr);
+		//	index = attr_list.size() - 3;
+		//	ext->put_attribute_in_map(new_attr,index);
+		//	ext->increment_state_and_status_indexes();
+		//}
 	}
 	else
 	{
-		if (idl_3 == false)
-		{
-			Attribute * new_attr = new Attribute(prop_list,attr,dev_name,index);
-			add_attr(new_attr);
-			index = attr_list.size() - 1;
-		}
-		else
-		{
-			Attribute * new_attr = new Attribute(prop_list,attr,dev_name,index);
-			attr_list.insert(ite,new_attr);
-			index = attr_list.size() - 3;
-			ext->put_attribute_in_map(new_attr,index);
-			ext->increment_state_and_status_indexes();
-		}
+        Attribute * new_attr = new Attribute(prop_list,attr,dev_name,index);
+		add_attr(new_attr);
+		index = attr_list.size() - 1;
+		//if (idl_3 == false)
+		//{
+		//	Attribute * new_attr = new Attribute(prop_list,attr,dev_name,index);
+		//	add_attr(new_attr);
+		//	index = attr_list.size() - 1;
+		//}
+		//else
+		//{
+		//	Attribute * new_attr = new Attribute(prop_list,attr,dev_name,index);
+		//	attr_list.insert(ite,new_attr);
+		//	index = attr_list.size() - 3;
+		//	ext->put_attribute_in_map(new_attr,index);
+		//	ext->increment_state_and_status_indexes();
+		//}
 	}
 
 //
 // If it is writable, add it to the writable attribute list
 //
-
+	cout4 << "------------ffffffffffffffffffffffffffff" << std::endl;
 	Tango::AttrWriteType w_type = attr_list[index]->get_writable();
 	if ((w_type == Tango::WRITE) ||
 	    (w_type == Tango::READ_WRITE))
@@ -870,13 +886,13 @@ void MultiAttribute::add_attribute(std::string &dev_name,DeviceClass *dev_class_
 
 	check_associated(index,dev_name);
 
-	cout4 << "Leaving MultiAttribute::add_attribute" << std::endl;
+	cout4 << "Leaving MultiLocalAttribute::add_attribute" << std::endl;
 }
 
 //+-------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::add_fwd_attribute
+//		MultiLocalAttribute::add_fwd_attribute
 //
 // description :
 //		Construct a new forwarded attribute object and add it to the device attribute list
@@ -889,9 +905,9 @@ void MultiAttribute::add_attribute(std::string &dev_name,DeviceClass *dev_class_
 //
 //-------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::add_fwd_attribute(std::string &dev_name,DeviceClass *dev_class_ptr,long index, Attr *new_attr)
+void MultiLocalAttribute::add_fwd_attribute(std::string &dev_name,DeviceClass *dev_class_ptr,long index, Attr *new_attr)
 {
-	cout4 << "Entering MultiAttribute::add_fwd_attribute" << std::endl;
+	cout4 << "Entering MultiLocalAttribute::add_fwd_attribute" << std::endl;
 
 //
 // Retrieve device class attribute list
@@ -1002,13 +1018,13 @@ void MultiAttribute::add_fwd_attribute(std::string &dev_name,DeviceClass *dev_cl
 //
 	check_associated(index,dev_name);
 
-	cout4 << "Leaving MultiAttribute::add_fwd_attribute" << std::endl;
+	cout4 << "Leaving MultiLocalAttribute::add_fwd_attribute" << std::endl;
 }
 
 //+------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::remove_attribute
+//		MultiLocalAttribute::remove_attribute
 //
 // description :
 //		Remove one  attribute object from the device attribute list
@@ -1021,9 +1037,9 @@ void MultiAttribute::add_fwd_attribute(std::string &dev_name,DeviceClass *dev_cl
 //
 //--------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::remove_attribute(std::string &attr_name,bool update_idx)
+void MultiLocalAttribute::remove_attribute(std::string &attr_name,bool update_idx)
 {
-	cout4 << "Entering MultiAttribute::remove_attribute" << std::endl;
+	cout4 << "Entering MultiLocalAttribute::remove_attribute" << std::endl;
 
 //
 // Get attribute index in vector
@@ -1039,7 +1055,6 @@ void MultiAttribute::remove_attribute(std::string &attr_name,bool update_idx)
 
 	long old_idx = att->get_attr_idx();
 	DeviceImpl *the_dev = att->get_att_device();
-	std::string &dev_class_name = the_dev->get_device_class()->get_name();
 
 	ext->attr_map.erase(att->get_name_lower());
 	delete att;
@@ -1058,7 +1073,7 @@ void MultiAttribute::remove_attribute(std::string &attr_name,bool update_idx)
 	{
 // This attribute has been removed from the class attributes list
 // In devices attributes lists for this class, update all the indexes to
-// MultiClassAttribute vector for the attributes which are following (in MultiClassAttribute vector) the one
+// MultiDeviceLevelAttribute vector for the attributes which are following (in MultiDeviceLevelAttribute vector) the one
 // which has been deleted
 // This is a 2 steps process:
 // 1 - Update indexes in local device
@@ -1072,27 +1087,6 @@ void MultiAttribute::remove_attribute(std::string &attr_name,bool update_idx)
                 (*pos_it)->set_attr_idx(idx - 1);
             }
         }
-//  Update indexes in remaining device(s) belonging to the same class
-		Tango::Util *tg = Tango::Util::instance();
-		std::vector<DeviceImpl *> &dev_list = tg->get_device_list_by_class(dev_class_name);
-
-		std::vector<DeviceImpl *>::iterator dev_ite;
-		for (dev_ite = dev_list.begin();dev_ite != dev_list.end();++dev_ite)
-		{
-			if (*dev_ite == the_dev)
-				continue;
-
-			MultiAttribute * dev_multi_attr = (*dev_ite)->get_device_attr();
-			std::vector<Attribute *> &dev_att_list = dev_multi_attr->get_attribute_list();
-			for (unsigned int i = 0;i < dev_att_list.size()-2 /* ignore state and status */ ;++i)
-			{
-				long idx = dev_att_list[i]->get_attr_idx();
-				if (idx > old_idx)
-				{
-					dev_att_list[i]->set_attr_idx(idx - 1);
-				}
-			}
-		}
 	}
 
 //
@@ -1135,14 +1129,14 @@ void MultiAttribute::remove_attribute(std::string &attr_name,bool update_idx)
 		check_associated(i,default_dev_name);
 	}
 
-	cout4 << "Leaving MultiAttribute::remove_attribute" << std::endl;
+	cout4 << "Leaving MultiLocalAttribute::remove_attribute" << std::endl;
 }
 
 
 //+-----------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::get_attr_by_name
+//		MultiLocalAttribute::get_attr_by_name
 //
 // description :
 //		Return a reference to the the Attribute object for the wanted attribue
@@ -1156,9 +1150,9 @@ void MultiAttribute::remove_attribute(std::string &attr_name,bool update_idx)
 //
 //-------------------------------------------------------------------------------------------------------------------
 
-Attribute &MultiAttribute::get_attr_by_name(const char *attr_name)
+Attribute &MultiLocalAttribute::get_attr_by_name(const char *attr_name)
 {
-	cout2 << "MultiAttribute::get_attr_by_name: " << attr_name << std::endl;
+	cout2 << "MultiLocalAttribute::get_attr_by_name: " << attr_name << std::endl;
     Attribute * attr = 0;
     std::string st(attr_name);
     std::transform(st.begin(),st.end(),st.begin(),::tolower);
@@ -1168,13 +1162,13 @@ Attribute &MultiAttribute::get_attr_by_name(const char *attr_name)
     }
     catch(std::out_of_range &e)
     {
-        cout3 << "MultiAttribute::get_attr_by_name throwing exception" << std::endl;
+        cout3 << "MultiLocalAttribute::get_attr_by_name throwing exception" << std::endl;
         TangoSys_OMemStream o;
 
         o << attr_name << " attribute not found" << std::ends;
         Except::throw_exception((const char *)API_AttrNotFound,
                                 o.str(),
-                                (const char *)"MultiAttribute::get_attr_by_name");
+                                (const char *)"MultiLocalAttribute::get_attr_by_name");
     }
     return *attr;
 }
@@ -1182,7 +1176,7 @@ Attribute &MultiAttribute::get_attr_by_name(const char *attr_name)
 //+------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::get_w_attr_by_name
+//		MultiLocalAttribute::get_w_attr_by_name
 //
 // description :
 //		Return a reference to the the Attribute object for the wanted attribue
@@ -1196,7 +1190,7 @@ Attribute &MultiAttribute::get_attr_by_name(const char *attr_name)
 //
 //-------------------------------------------------------------------------------------------------------------------
 
-WAttribute &MultiAttribute::get_w_attr_by_name(const char *attr_name)
+WAttribute &MultiLocalAttribute::get_w_attr_by_name(const char *attr_name)
 {
     Attribute * attr = 0;
     std::string st(attr_name);
@@ -1207,25 +1201,25 @@ WAttribute &MultiAttribute::get_w_attr_by_name(const char *attr_name)
     }
     catch(std::out_of_range &e)
     {
-        cout3 << "MultiAttribute::get_attr_by_name throwing exception" << std::endl;
+        cout3 << "MultiLocalAttribute::get_attr_by_name throwing exception" << std::endl;
         TangoSys_OMemStream o;
 
         o << attr_name << " writable attribute not found" << std::ends;
         Except::throw_exception((const char *)API_AttrNotFound,
                                 o.str(),
-                                (const char *)"MultiAttribute::get_w_attr_by_name");
+                                (const char *)"MultiLocalAttribute::get_w_attr_by_name");
     }
 
     if ((attr->get_writable() != Tango::WRITE) &&
         (attr->get_writable() != Tango::READ_WRITE))
     {
-        cout3 << "MultiAttribute::get_attr_by_name throwing exception" << std::endl;
+        cout3 << "MultiLocalAttribute::get_attr_by_name throwing exception" << std::endl;
         TangoSys_OMemStream o;
 
         o << attr_name << " writable attribute not found" << std::ends;
         Except::throw_exception((const char *)API_AttrNotFound,
                                 o.str(),
-                                (const char *)"MultiAttribute::get_w_attr_by_name");
+                                (const char *)"MultiLocalAttribute::get_w_attr_by_name");
     }
     return static_cast<WAttribute &>(*attr);
 }
@@ -1233,7 +1227,7 @@ WAttribute &MultiAttribute::get_w_attr_by_name(const char *attr_name)
 //+-------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::get_attr_ind_by_name
+//		MultiLocalAttribute::get_attr_ind_by_name
 //
 // description :
 //		Return the index in the Attribute object vector of a specified attribute
@@ -1247,7 +1241,7 @@ WAttribute &MultiAttribute::get_w_attr_by_name(const char *attr_name)
 //
 //--------------------------------------------------------------------------------------------------------------------
 
-long MultiAttribute::get_attr_ind_by_name(const char *attr_name)
+long MultiLocalAttribute::get_attr_ind_by_name(const char *attr_name)
 {
     long i;
     std::string st(attr_name);
@@ -1259,13 +1253,13 @@ long MultiAttribute::get_attr_ind_by_name(const char *attr_name)
     }
     catch(std::out_of_range &e)
     {
-        cout3 << "MultiAttribute::get_attr_ind_by_name throwing exception" << std::endl;
+        cout3 << "MultiLocalAttribute::get_attr_ind_by_name throwing exception" << std::endl;
         TangoSys_OMemStream o;
 
         o << attr_name << " attribute not found" << std::ends;
         Except::throw_exception((const char *)API_AttrNotFound,
                                 o.str(),
-                                (const char *)"MultiAttribute::get_attr_ind_by_name");
+                                (const char *)"MultiLocalAttribute::get_attr_ind_by_name");
     }
     return i;
 }
@@ -1273,7 +1267,7 @@ long MultiAttribute::get_attr_ind_by_name(const char *attr_name)
 //+--------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::check_alarm
+//		MultiLocalAttribute::check_alarm
 //
 // description :
 //		check alarm on all the attribute where one alarm is defined
@@ -1283,7 +1277,7 @@ long MultiAttribute::get_attr_ind_by_name(const char *attr_name)
 //
 //--------------------------------------------------------------------------------------------------------------------
 
-bool MultiAttribute::check_alarm()
+bool MultiLocalAttribute::check_alarm()
 {
 	unsigned long i;
 	bool ret,tmp_ret;
@@ -1322,7 +1316,7 @@ bool MultiAttribute::check_alarm()
 //+------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::read_alarm
+//		MultiLocalAttribute::read_alarm
 //
 // description :
 //		Add a message in the device status string if one of the device attribute is in the alarm state
@@ -1333,7 +1327,7 @@ bool MultiAttribute::check_alarm()
 //
 //--------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::read_alarm(std::string &status)
+void MultiLocalAttribute::read_alarm(std::string &status)
 {
 	unsigned long i;
 
@@ -1452,7 +1446,7 @@ void MultiAttribute::read_alarm(std::string &status)
 //+-----------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::get_event_param
+//		MultiLocalAttribute::get_event_param
 //
 // description :
 //		Return event info for each attribute with events subscribed
@@ -1463,7 +1457,7 @@ void MultiAttribute::read_alarm(std::string &status)
 //
 //------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::get_event_param(EventSubscriptionStates& eve)
+void MultiLocalAttribute::get_event_param(EventSubscriptionStates& eve)
 {
 	unsigned int i;
 
@@ -1551,7 +1545,7 @@ void MultiAttribute::get_event_param(EventSubscriptionStates& eve)
 //+-----------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::set_event_param
+//		MultiLocalAttribute::set_event_param
 //
 // description :
 //		Set event info for each attribute with events subscribed
@@ -1562,7 +1556,7 @@ void MultiAttribute::get_event_param(EventSubscriptionStates& eve)
 //
 //------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::set_event_param(const EventSubscriptionStates& eve)
+void MultiLocalAttribute::set_event_param(const EventSubscriptionStates& eve)
 {
 	for (size_t i = 0;i < eve.size();i++)
 	{
@@ -1636,7 +1630,7 @@ void MultiAttribute::set_event_param(const EventSubscriptionStates& eve)
 //+------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::add_write_value
+//		MultiLocalAttribute::add_write_value
 //
 // description :
 //		For scalar attribute with an associated write attribute, the read_attributes CORBA operation also returns
@@ -1648,7 +1642,7 @@ void MultiAttribute::set_event_param(const EventSubscriptionStates& eve)
 //
 //-------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::add_write_value(Attribute &att)
+void MultiLocalAttribute::add_write_value(Attribute &att)
 {
 	WAttribute &assoc_att = get_w_attr_by_ind(att.get_assoc_ind());
 
@@ -1740,7 +1734,7 @@ void MultiAttribute::add_write_value(Attribute &att)
 //+------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::is_att_quality_alarmed()
+//		MultiLocalAttribute::is_att_quality_alarmed()
 //
 // description :
 //		Check for all attribute if one of them has its quality factor set to ALARM.
@@ -1748,7 +1742,7 @@ void MultiAttribute::add_write_value(Attribute &att)
 //
 //------------------------------------------------------------------------------------------------------------------
 
-bool MultiAttribute::is_att_quality_alarmed()
+bool MultiLocalAttribute::is_att_quality_alarmed()
 {
 	unsigned long i;
 	bool ret;
@@ -1772,14 +1766,14 @@ bool MultiAttribute::is_att_quality_alarmed()
 //+------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::add_alarmed_quality_factor()
+//		MultiLocalAttribute::add_alarmed_quality_factor()
 //
 // description :
 //		Add to the status string name of attributes with a quality factor set to alarm
 //
 //-------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::add_alarmed_quality_factor(std::string &status)
+void MultiLocalAttribute::add_alarmed_quality_factor(std::string &status)
 {
 	unsigned long i,j;
 
@@ -1833,7 +1827,7 @@ void MultiAttribute::add_alarmed_quality_factor(std::string &status)
 //+------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::add_attr()
+//		MultiLocalAttribute::add_attr()
 //
 // description :
 //		Add given attribute to the attribute list vector and map
@@ -1843,7 +1837,7 @@ void MultiAttribute::add_alarmed_quality_factor(std::string &status)
 //			- att : The newly configured attribute
 //
 //-------------------------------------------------------------------------------------------------------------------
-void MultiAttribute::add_attr(Attribute *att)
+void MultiLocalAttribute::add_attr(Attribute *att)
 {
     attr_list.push_back(att);
     ext->put_attribute_in_map(att,attr_list.size() - 1);
@@ -1852,7 +1846,7 @@ void MultiAttribute::add_attr(Attribute *att)
 //+------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::update()
+//		MultiLocalAttribute::update()
 //
 // description :
 //		Update attribute lists when a forwarded attribute conf. is now completely known (after a device with fwd
@@ -1865,7 +1859,7 @@ void MultiAttribute::add_attr(Attribute *att)
 //
 //-------------------------------------------------------------------------------------------------------------------
 
-void MultiAttribute::update(Attribute &att,std::string &dev_name)
+void MultiLocalAttribute::update(Attribute &att,std::string &dev_name)
 {
 	long ind = get_attr_ind_by_name(att.get_name().c_str());
 
@@ -1908,7 +1902,7 @@ void MultiAttribute::update(Attribute &att,std::string &dev_name)
 //+------------------------------------------------------------------------------------------------------------------
 //
 // method :
-//		MultiAttribute::is_opt_prop()
+//		MultiLocalAttribute::is_opt_prop()
 //
 // description :
 //		This method returns true if the property name passed as argument is the name of one of the attribute optional
@@ -1923,7 +1917,7 @@ void MultiAttribute::update(Attribute &att,std::string &dev_name)
 //
 //-------------------------------------------------------------------------------------------------------------------
 
-bool MultiAttribute::is_opt_prop(const std::string &prop_name)
+bool MultiLocalAttribute::is_opt_prop(const std::string &prop_name)
 {
     bool ret = false;
 

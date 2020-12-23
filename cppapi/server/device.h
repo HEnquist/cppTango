@@ -35,12 +35,14 @@
 #include <tango.h>
 #include <blackbox.h>
 #include <classattribute.h>
+#include <devicelevelattribute.h>
 #include <classpipe.h>
 #include <attrdesc.h>
 #include <attribute.h>
 #include <w_attribute.h>
 #include <fwdattribute.h>
 #include <multiattribute.h>
+#include <multilocalattribute.h>
 #include <pollobj.h>
 #include <deviceclass.h>
 #include <devintr.h>
@@ -258,6 +260,16 @@ public:
 	MultiAttribute *get_device_attr() {return dev_attr;}
 
 /**
+ * Get device multi local attribute object.
+ *
+ * Return a pointer to the device multi attribute object for local attributes
+ *
+ * @return Pointer to the device multi attribute object
+ */
+
+	MultiLocalAttribute *get_device_local_attr() {return dev_local_attr;}
+
+/**
  * Set device multi attribute object.
  *
  * Set the pointer to the device multi attribute object
@@ -266,6 +278,16 @@ public:
  */
 
 	void set_device_attr(MultiAttribute *ptr) {dev_attr = ptr;}
+
+/**
+ * Set device multi local attribute object.
+ *
+ * Set the pointer to the device multi attribute object for local attributes
+ *
+ * @return Pointer to the device multi attribute object
+ */
+
+	void set_device_local_attr(MultiLocalAttribute *ptr) {dev_local_attr = ptr;}
 
 /**
  * Get a pointer to the associated DbDevice object.
@@ -566,7 +588,7 @@ public:
  * Click <a href="https://tango-controls.readthedocs.io/en/latest/development/advanced/IDL.html#exceptions">here</a> to read
  * <b>DevFailed</b> exception specification
  */
- 	void add_attribute(Attr *new_attr);
+ 	void add_attribute(Attr *new_attr, bool device_level = false);
 
 /**
  * Remove one attribute from the device attribute list.
@@ -3289,6 +3311,10 @@ protected:
  */
  	MultiAttribute		*dev_attr;
 /**
+ * Pointer to the multi attribute object for local attributes
+ */
+ 	MultiLocalAttribute		*dev_local_attr;
+/**
  * Pointer to the associated DbDevice object
  */
  	DbDevice			*db_dev;
@@ -3413,6 +3439,14 @@ public:
 
 	void set_call_source(DevSource _s) {call_source=_s;}
 	DevSource get_call_source() {return call_source;}
+
+	//std::vector<Attribute *> &get_local_attribute_list() {return attribute_list;}
+	//Attribute &get_local_attribute_by_name(const std::string &);
+	// void remove_local_attribute(const std::string &);
+
+	Attribute &get_attr_by_name(const char *attr_name);
+
+ 	MultiDeviceLevelAttribute *get_local_attr() {return local_attr_list;}
 
 	std::vector<Command *> &get_local_command_list() {return command_list;}
 	Command &get_local_cmd_by_name(const std::string &);
@@ -3540,6 +3574,9 @@ protected:
 	DevSource					call_source;
 
 	std::vector<Command *>			command_list;
+	//std::vector<Attribute *>			attribute_list;
+	MultiDeviceLevelAttribute			*local_attr_list;
+
 	time_t						event_intr_change_subscription;
 	bool						intr_change_ev;
 

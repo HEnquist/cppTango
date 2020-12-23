@@ -41,6 +41,7 @@
 #include <blackbox.h>
 #include <dserversignal.h>
 #include <classattribute.h>
+#include <devicelevelattribute.h>
 #include <eventsupplier.h>
 #include <apiexcept.h>
 
@@ -196,6 +197,10 @@ void DeviceImpl::real_ctor()
 //
 
     dev_attr = new MultiAttribute(device_name, device_class, this);
+
+    dev_local_attr = new MultiLocalAttribute(device_name, device_class, this);
+
+    local_attr_list = new MultiDeviceLevelAttribute();
 
 //
 // Create device pipe and finish the pipe config init since we now have device name
@@ -795,6 +800,30 @@ void DeviceImpl::signal_handler(long signo)
     cout4 << "Leaving DeviceImpl::signal_handler method()" << std::endl;
 }
 
+//+-------------------------------------------------------------------------
+//
+// method :		DeviceImpl::get_attr_by_name
+//
+// description :	This method gets an attribute by name, 
+//			by checking both the local and class attribute lists
+//
+// in : 		attr_name : The attribute name
+//
+//--------------------------------------------------------------------------
+
+Attribute &DeviceImpl::get_attr_by_name(const char *attr_name)
+{
+    Attribute * attr = 0;
+    try
+    {
+        attr = &dev_attr->get_attr_by_name(attr_name);
+    }
+    catch (Tango::DevFailed &)
+    {
+        attr = &dev_local_attr->get_attr_by_name(attr_name);
+    }
+    return *attr;
+}
 
 //+-------------------------------------------------------------------------
 //
@@ -3202,7 +3231,7 @@ void DeviceImpl::write_attributes(const Tango::AttributeValueList &values)
 //
 //--------------------------------------------------------------------------------------------------------------------
 
-void DeviceImpl::add_attribute(Tango::Attr *new_attr)
+void DeviceImpl::add_attribute(Tango::Attr *new_attr, bool device_level)
 {
 //
 // Take the device monitor in order to protect the attribute list
@@ -3210,8 +3239,11 @@ void DeviceImpl::add_attribute(Tango::Attr *new_attr)
 
     AutoTangoMonitor sync(this, true);
 
-    std::vector<Tango::Attr *> &attr_list = device_class->get_class_attr()->get_attr_list();
-    long old_attr_nb = attr_list.size();
+    std::vector<Tango::Attr *> &class_attr_list = device_class->get_class_attr()->get_attr_list();
+    long old_class_attr_nb = class_attr_list.size();
+
+    std::vector<Tango::Attr *> &local_attr_list = get_local_attr()->get_attr_list();
+    long old_local_attr_nb = local_attr_list.size();
 
 //
 // Check that this attribute is not already defined for this device. If it is already there, immediately returns.
@@ -3220,10 +3252,14 @@ void DeviceImpl::add_attribute(Tango::Attr *new_attr)
 //
 
     std::string &attr_name = new_attr->get_name();
+
+    cout4 << "DeviceImpl::add_attribute: " << attr_name << std::endl;
+
     bool already_there = true;
     bool throw_ex = false;
     try
     {
+        cout4 << "------------find in class: " << attr_name << std::endl;
         Tango::Attribute &al_attr = dev_attr->get_attr_by_name(attr_name.c_str());
         if ((al_attr.get_data_type() != new_attr->get_type()) ||
             (al_attr.get_data_format() != new_attr->get_format()) ||
@@ -3235,6 +3271,25 @@ void DeviceImpl::add_attribute(Tango::Attr *new_attr)
     catch (Tango::DevFailed &)
     {
         already_there = false;
+    }
+    if (already_there == false)
+    {
+        already_there = true;
+        try
+        {
+            cout4 << "------------find in dev: " << attr_name << std::endl;
+            Tango::Attribute &al_attr = dev_local_attr->get_attr_by_name(attr_name.c_str());
+            if ((al_attr.get_data_type() != new_attr->get_type()) ||
+                (al_attr.get_data_format() != new_attr->get_format()) ||
+                (al_attr.get_writable() != new_attr->get_writable()))
+            {
+                throw_ex = true;
+            }
+        }
+        catch (Tango::DevFailed &)
+        {
+            already_there = false;
+        }
     }
 
 //
@@ -3286,70 +3341,90 @@ void DeviceImpl::add_attribute(Tango::Attr *new_attr)
     }
 
 //
-// Add this attribute in the MultiClassAttribute attr_list vector if it does not already exist
+// Add this attribute in the MultiClassAttribute class_attr_list vector if it does not already exist
 //
-
     bool need_free = false;
     long i;
-
-    for (i = 0; i < old_attr_nb; i++)
+    if (device_level == false)
     {
-        if ((attr_list[i]->get_name() == attr_name) && (attr_list[i]->get_cl_name() == new_attr->get_cl_name()))
+        cout4 << "------------add to class" << attr_name << std::endl;
+        for (i = 0; i < old_class_attr_nb; i++)
         {
-            need_free = true;
-            break;
+            if ((class_attr_list[i]->get_name() == attr_name) && (class_attr_list[i]->get_cl_name() == new_attr->get_cl_name()))
+            {
+                need_free = true;
+                break;
+            }
         }
-    }
 
-    if (i == old_attr_nb)
-    {
-        attr_list.push_back(new_attr);
+        if (i == old_class_attr_nb)
+        {
+            class_attr_list.push_back(new_attr);
 
 //
 // Get all the properties defined for this attribute at class level
 //
 
-        device_class->get_class_attr()->init_class_attribute(
-            device_class->get_name(),
-            old_attr_nb);
-    }
-    else
-    {
+            device_class->get_class_attr()->init_class_attribute(
+                device_class->get_name(),
+                old_class_attr_nb);
+        }
+        else
+        {
 
 //
 // An attribute with the same name is already defined within the class. Check if the data type, data format and
 // write type are the same
 //
 
-        if ((attr_list[i]->get_type() != new_attr->get_type()) ||
-            (attr_list[i]->get_format() != new_attr->get_format()) ||
-            (attr_list[i]->get_writable() != new_attr->get_writable()))
-        {
-            TangoSys_OMemStream o;
+            if ((class_attr_list[i]->get_type() != new_attr->get_type()) ||
+                (class_attr_list[i]->get_format() != new_attr->get_format()) ||
+                (class_attr_list[i]->get_writable() != new_attr->get_writable()))
+            {
+                TangoSys_OMemStream o;
 
-            o << "Device " << get_name() << " -> Attribute " << attr_name
-              << " already exists for your device class but with other definition";
-            o << "\n(data type, data format or data write type)" << std::ends;
+                o << "Device " << get_name() << " -> Attribute " << attr_name
+                  << " already exists for your device class but with other definition";
+                o << "\n(data type, data format or data write type)" << std::ends;
 
-            Except::throw_exception((const char *) API_AttrNotFound,
-                                    o.str(),
-                                    (const char *) "DeviceImpl::add_attribute");
+                Except::throw_exception((const char *) API_AttrNotFound,
+                                        o.str(),
+                                        (const char *) "DeviceImpl::add_attribute");
+            }
         }
-    }
 
 //
 // Add the attribute to the MultiAttribute object
 //
 
-    if (new_attr->is_fwd() == true)
-    {
-        dev_attr->add_fwd_attribute(device_name, device_class, i, new_attr);
+        if (new_attr->is_fwd() == true)
+        {
+            dev_attr->add_fwd_attribute(device_name, device_class, i, new_attr);
+        }
+        else
+        {
+            dev_attr->add_attribute(device_name, device_class, i);
+        }
     }
-    else
+    else 
     {
-        dev_attr->add_attribute(device_name, device_class, i);
+        cout4 << "------------add to dev local_attr_list " << attr_name << std::endl;
+        local_attr_list.push_back(new_attr);
+//
+// Add the attribute to the MultiAttribute object
+//
+        cout4 << "------------add to dev dev_local_attr " << i << attr_name << std::endl;
+        if (new_attr->is_fwd() == true)
+        {
+            dev_local_attr->add_fwd_attribute(device_name, device_class, i, new_attr);
+        }
+        else
+        {
+            dev_local_attr->add_attribute(device_name, device_class, i, new_attr);
+        }
     }
 
+    cout4 << "------------polling etc " << attr_name << std::endl;
 //
 // Eventually start or update device interface change event thread
 //
@@ -3374,6 +3449,7 @@ void DeviceImpl::add_attribute(Tango::Attr *new_attr)
     {
         delete new_attr;
     }
+    cout4 << "Leaving DeviceImpl::add_attribute" << attr_name << std::endl;
 
 }
 

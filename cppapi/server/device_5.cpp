@@ -140,6 +140,7 @@ Tango::AttributeValueList_5* Device_5Impl::read_attributes_5(const Tango::DevVar
 
 	unsigned long nb_names = names.length();
 	unsigned long nb_dev_attr = dev_attr->get_attr_nb();
+	unsigned long nb_local_dev_attr = dev_local_attr->get_attr_nb();
 	Tango::DevVarStringArray real_names(nb_names);
 	unsigned long i;
 
@@ -148,10 +149,14 @@ Tango::AttributeValueList_5* Device_5Impl::read_attributes_5(const Tango::DevVar
 		std::string att_name(names[0]);
 		if (att_name == AllAttr)
 		{
-			real_names.length(nb_dev_attr);
+			real_names.length(nb_dev_attr + nb_local_dev_attr);
 			for (i = 0;i < nb_dev_attr;i++)
 			{
 				real_names[i] = dev_attr->get_attr_by_ind(i).get_name().c_str();
+			}
+			for (i = 0;i < nb_local_dev_attr;i++)
+			{
+				real_names[i+nb_dev_attr] = dev_attr->get_attr_by_ind(i).get_name().c_str();
 			}
 		}
 		else
@@ -228,7 +233,7 @@ Tango::AttributeValueList_5* Device_5Impl::read_attributes_5(const Tango::DevVar
 		{
 			for (size_t loop = 0;loop < nb_names;loop++)
 			{
-				Attribute &att = dev_attr->get_attr_by_name(real_names[loop]);
+				Attribute &att = get_attr_by_name(real_names[loop]);
 
 				if (att.is_fwd_att() == true)
 				{
@@ -428,7 +433,7 @@ Tango::AttributeValueList_5* Device_5Impl::write_read_attributes_5(const Tango::
 
 	for (unsigned int loop = 0;loop < r_w_att.size();++loop)
 	{
-		Tango::Attribute &att = dev_attr->get_attr_by_name(values[loop].name);
+		Tango::Attribute &att = get_attr_by_name(values[loop].name);
 		if (att.is_fwd_att() == true)
 		{
 			Tango::FwdAttribute &fwd_att = static_cast<FwdAttribute &>(att);
@@ -554,6 +559,7 @@ Tango::AttributeConfigList_5 *Device_5Impl::get_attribute_config_5(const Tango::
 //
 
 	long nb_dev_attr = dev_attr->get_attr_nb();
+	long nb_dev_local_attr = dev_local_attr->get_attr_nb();
 
 //
 // Check if the caller want to get config for all attribute.
@@ -567,7 +573,7 @@ Tango::AttributeConfigList_5 *Device_5Impl::get_attribute_config_5(const Tango::
 		if (in_name == AllAttr_3)
 		{
 			all_attr = true;
-			nb_attr = nb_dev_attr;
+			nb_attr = nb_dev_attr + nb_dev_local_attr;
 		}
 	}
 
@@ -590,19 +596,34 @@ Tango::AttributeConfigList_5 *Device_5Impl::get_attribute_config_5(const Tango::
 //
 // Fill in these structures
 //
-
-	for (long i = 0;i < nb_attr;i++)
+	if (all_attr == true)
 	{
 		try
 		{
-			if (all_attr == true)
+			for (long i = 0;i < nb_dev_attr;i++)
 			{
 				Attribute &attr = dev_attr->get_attr_by_ind(i);
 				attr.get_properties((*back)[i]);
 			}
-			else
+			for (long i = 0;i < nb_dev_local_attr;i++)
 			{
-				Attribute &attr = dev_attr->get_attr_by_name(names[i]);
+				Attribute &attr = dev_attr->get_attr_by_ind(i);
+				attr.get_properties((*back)[nb_dev_attr+i]);
+			}
+		}
+		catch (Tango::DevFailed &)
+		{
+			delete back;
+			throw;
+		}
+	}
+	else {
+		try
+		{
+			for (long i = 0;i < nb_attr;i++)
+			{
+
+				Attribute &attr = get_attr_by_name(names[i]);
 				attr.get_properties((*back)[i]);
 			}
 		}
@@ -722,7 +743,7 @@ Tango::DevAttrHistory_5 *Device_5Impl::read_attribute_history_5(const char* name
 // exception in case of unsupported attribute
 //
 
-	Attribute &att = dev_attr->get_attr_by_name(name);
+	Attribute &att = get_attr_by_name(name);
 
 	std::string attr_str(name);
 	std::transform(attr_str.begin(),attr_str.end(),attr_str.begin(),::tolower);

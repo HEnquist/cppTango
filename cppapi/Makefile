@@ -379,6 +379,7 @@ SERVER_INCLUDE =	attrdesc.h \
 			device_4.h \
 			device_5.h \
 			deviceclass.h \
+			devicelevelattribute.h \
 			devintr.h \
 			dintrthread.h \
 			dserver.h \
