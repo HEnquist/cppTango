@@ -560,7 +560,7 @@ Tango::AttributeConfigList_5 *Device_5Impl::get_attribute_config_5(const Tango::
 
 	long nb_dev_attr = dev_attr->get_attr_nb();
 	long nb_dev_local_attr = dev_local_attr->get_attr_nb();
-
+	cout4 << "------------========= " << names << " " << nb_dev_attr << " " << nb_dev_local_attr << std::endl;
 //
 // Check if the caller want to get config for all attribute.
 // If the device implements IDL 3 or above  (State and status as attributes) and the client is an old one (not able to
@@ -576,7 +576,7 @@ Tango::AttributeConfigList_5 *Device_5Impl::get_attribute_config_5(const Tango::
 			nb_attr = nb_dev_attr + nb_dev_local_attr;
 		}
 	}
-
+	cout4 << "---------->>>>>>>>>>>> aaaaaaaaa" << std::endl;
 //
 // Allocate memory for the AttributeConfig structures
 //
@@ -592,7 +592,7 @@ Tango::AttributeConfigList_5 *Device_5Impl::get_attribute_config_5(const Tango::
 				        (const char *)"Can't allocate memory in server",
 				        (const char *)"Device_5Impl::get_attribute_config_5");
 	}
-
+	cout4 << "---------->>>>>>>>>>>> bbbbbbbb" << std::endl;
 //
 // Fill in these structures
 //
@@ -607,7 +607,7 @@ Tango::AttributeConfigList_5 *Device_5Impl::get_attribute_config_5(const Tango::
 			}
 			for (long i = 0;i < nb_dev_local_attr;i++)
 			{
-				Attribute &attr = dev_attr->get_attr_by_ind(i);
+				Attribute &attr = dev_local_attr->get_attr_by_ind(i);
 				attr.get_properties((*back)[nb_dev_attr+i]);
 			}
 		}
