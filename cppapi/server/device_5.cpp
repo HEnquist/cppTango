@@ -178,6 +178,7 @@ Tango::AttributeValueList_5* Device_5Impl::read_attributes_5(const Tango::DevVar
 
 	try
 	{
+		cout4 << "-----------create aid" << std::endl;
 		Tango::AttributeValue_5 *l_back = new Tango::AttributeValue_5 [nb_names];
 		aid.data_5 = new Tango::AttributeValueList_5(nb_names,nb_names,l_back,true);
 
@@ -622,7 +623,7 @@ Tango::AttributeConfigList_5 *Device_5Impl::get_attribute_config_5(const Tango::
 		{
 			for (long i = 0;i < nb_attr;i++)
 			{
-
+				cout4 << "---------->>>>>>>>>>>> get attr" << names[i] << std::endl;
 				Attribute &attr = get_attr_by_name(names[i]);
 				attr.get_properties((*back)[i]);
 			}

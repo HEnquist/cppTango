@@ -814,13 +814,17 @@ void DeviceImpl::signal_handler(long signo)
 Attribute &DeviceImpl::get_attr_by_name(const char *attr_name)
 {
     Attribute * attr = 0;
+    cout4 << "DeviceImpl::get_attr_by_name, name: " <<attr_name << std::endl;
     try
     {
         attr = &dev_attr->get_attr_by_name(attr_name);
+        cout4 << "DeviceImpl::get_attr_by_name, found at class level" << std::endl;
     }
     catch (Tango::DevFailed &)
     {
+        cout4 << "DeviceImpl::get_attr_by_name, looking in device level" << std::endl;
         attr = &dev_local_attr->get_attr_by_name(attr_name);
+        cout4 << "DeviceImpl::get_attr_by_name, found at device level" << std::endl;
     }
     return *attr;
 }

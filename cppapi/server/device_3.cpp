@@ -315,7 +315,7 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 					     bool second_try,
 					     std::vector<long> &idx)
 {
-
+	cout4 << "read_attributes_no_except-----------aaaaaaaaaaaaa" << std::endl;
 //
 //  Write the device name into the per thread data for sub device diagnostics.
 //  Keep the old name, to put it back at the end!
@@ -325,7 +325,7 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 	SubDevDiag &sub = (Tango::Util::instance())->get_sub_dev_diag();
 	std::string last_associated_device = sub.get_associated_device();
 	sub.set_associated_device(get_name());
-
+	cout4 << "read_attributes_no_except-----------aaaaaaaaaaaaa1111" << std::endl;
 //
 // Catch all exceptions to set back the associated device after execution
 //
@@ -375,14 +375,17 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 				try
 				{
 				    long j;
-
-					j = dev_attr->get_attr_ind_by_name(names[i]);
-					if ((dev_attr->get_attr_by_ind(j).get_writable() == Tango::READ_WRITE) ||
-				    	(dev_attr->get_attr_by_ind(j).get_writable() == Tango::READ_WITH_WRITE))
+					cout4 << "read_attributes_no_except-----------aaaaabbb" << std::endl;
+					//j = dev_attr->get_attr_ind_by_name(names[i]);
+					Attribute &att = get_attr_by_name(names[i]);
+					cout4 << "read_attributes_no_except-----------bbbbbbb" << std::endl;
+					if ((att.get_writable() == Tango::READ_WRITE) ||
+				    	(att.get_writable() == Tango::READ_WITH_WRITE))
 					{
+						cout4 << "read_attributes_no_except-----------bbbbbb11111" << std::endl;
 						x.idx_in_multi_attr = j;
 						x.failed = false;
-						Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
+						//Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
 						if(att.is_startup_exception())
 							att.throw_startup_exception("Device_3Impl::read_attributes_no_except()");
 						wanted_w_attr.push_back(x);
@@ -392,7 +395,8 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 					}
 					else
 					{
-						if (dev_attr->get_attr_by_ind(j).get_writable() == Tango::WRITE)
+						cout4 << "read_attributes_no_except-----------bbbbbbbbbb22222222" << std::endl;
+						if (att.get_writable() == Tango::WRITE)
 						{
 
 //
@@ -400,11 +404,11 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 // written its value
 //
 
-							if (dev_attr->get_attr_by_ind(j).is_fwd_att() == true)
+							if (att.is_fwd_att() == true)
 							{
 								x.idx_in_multi_attr = j;
 								x.failed = false;
-								Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
+								//Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
 								if(att.is_startup_exception())
 									att.throw_startup_exception("Device_3Impl::read_attributes_no_except()");
 								wanted_attr.push_back(x);
@@ -415,7 +419,7 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 							{
 								x.idx_in_multi_attr = j	;
 								x.failed = false;
-								Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
+								//Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
 								if(att.is_startup_exception())
 									att.throw_startup_exception("Device_3Impl::read_attributes_no_except()");
 								wanted_w_attr.push_back(x);
@@ -423,9 +427,10 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 						}
 						else
 						{
+							cout4 << "read_attributes_no_except-----------bbbbbbbb33333333" << std::endl;
 							x.idx_in_multi_attr = j;
 							x.failed = false;
-							Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
+							//Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
 							if(att.is_startup_exception())
 								att.throw_startup_exception("Device_3Impl::read_attributes_no_except()");
 							wanted_attr.push_back(x);
@@ -433,6 +438,7 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
                             att.save_alarm_quality();
 						}
 					}
+					cout4 << "read_attributes_no_except-----------cccccccccc" << std::endl;
 				}
 				catch (Tango::DevFailed &e)
 				{
@@ -1074,7 +1080,14 @@ void Device_3Impl::read_attributes_from_cache(const Tango::DevVarStringArray& na
 	{
 		try
 		{
-			dev_attr->get_attr_ind_by_name(names[i]);
+			cout4 << "-----------aaaaaaaaaaaaaaaaaaaa" << std::endl;
+			try {
+				dev_attr->get_attr_ind_by_name(names[i]);
+			}
+			catch (Tango::DevFailed &e)
+			{
+				dev_local_attr->get_attr_ind_by_name(names[i]);
+			}
 			for (j = 0;j < nb_poll;j++)
 			{
 #ifdef _TG_WINDOWS_
@@ -1091,6 +1104,7 @@ void Device_3Impl::read_attributes_from_cache(const Tango::DevVarStringArray& na
 		}
 		catch (Tango::DevFailed &e)
 		{
+			cout4 << "-----------bbbbbbbbbaaaaaaaaaaaaaa" << std::endl;
 			if (aid.data_5 != nullptr)
 				error_from_devfailed((*aid.data_5)[i],e,names[i]);
 			else if (aid.data_4 != nullptr)
@@ -1117,7 +1131,8 @@ void Device_3Impl::read_attributes_from_cache(const Tango::DevVarStringArray& na
 
 		for (i = 0;i < non_polled.size();i++)
 		{
-			Attribute &att = dev_attr->get_attr_by_name(names[non_polled[i]]);
+			cout4 << "-----------ccccccccccccccccccccccc" << std::endl;
+			Attribute &att = get_attr_by_name(names[non_polled[i]]);
 			poll_period.push_back(att.get_polling_period());
 
 			if (poll_period.back() == 0)
@@ -1148,17 +1163,19 @@ void Device_3Impl::read_attributes_from_cache(const Tango::DevVarStringArray& na
 		if (not_polled_attr == nb_names)
 			return;
 	}
-
+	cout4 << "-----------ddddddddddddddddddddddddddddddd" << std::endl;
 //
 // For each attribute, check that some data are available in cache and that they are not too old
 //
 
 	for (i = 0;i < nb_names;i++)
 	{
-
+		cout4 << "-----------eeeeeeeeeeeeee000000000000000000" << std::endl;
 		if (aid.data_5 != nullptr)
 		{
+			cout4 << "-----------eeeeeeeeeeeeee0000000000000011111" << std::endl;
 			if ((*aid.data_5)[i].err_list.length() != 0)
+				cout4 << "-----------eeeeeeeeeeeeee00000000000000222222" << std::endl;
 				continue;
 		}
 		else if (aid.data_4 != nullptr)
@@ -1172,7 +1189,7 @@ void Device_3Impl::read_attributes_from_cache(const Tango::DevVarStringArray& na
 				continue;
 		}
 
-
+		cout4 << "-----------eeeeeeeeeeeeee11111111111111111" << std::endl;
 		PollObj *polled_attr = NULL;
 		unsigned long j;
 		for (j = 0;j < poll_list.size();j++)
@@ -1189,7 +1206,7 @@ void Device_3Impl::read_attributes_from_cache(const Tango::DevVarStringArray& na
 				break;
 			}
 		}
-
+		cout4 << "-----------eeeeeeeeeeeeeeee222222222222222222222" << std::endl;
 //
 // In some cases where data from polling are required by a DS for devices marked as polled but for which the polling
 // is not sarted yet, polled_attr could be NULL at the end of this loop. Return "No data yet" in this case
@@ -1197,6 +1214,7 @@ void Device_3Impl::read_attributes_from_cache(const Tango::DevVarStringArray& na
 
         if (polled_attr == NULL)
         {
+			cout4 << "-----------eeeeeeeeeeeeee3333333333333333333333" << std::endl;
 			TangoSys_OMemStream o;
 			o << "No data available in cache for attribute " << names[i] << std::ends;
 			std::string s = o.str();
@@ -1219,7 +1237,7 @@ void Device_3Impl::read_attributes_from_cache(const Tango::DevVarStringArray& na
 
 			continue;
         }
-
+		cout4 << "-----------fffffffffffffffffffffffffffffffffffff" << std::endl;
 //
 // Check that some data is available in cache
 //
@@ -1242,7 +1260,7 @@ void Device_3Impl::read_attributes_from_cache(const Tango::DevVarStringArray& na
 
 			continue;
 		}
-
+		cout4 << "-----------ggggggggggggggggggggggggggggggg" << std::endl;
 //
 // Check that data are still refreshed by the polling thread
 // Skip this test for object with external polling triggering (upd = 0)
@@ -1288,7 +1306,7 @@ void Device_3Impl::read_attributes_from_cache(const Tango::DevVarStringArray& na
 //
 // Get attribute data type
 //
-
+		cout4 << "-----------hhhhhhhhhhhhhhhhhhhhhhhhhhhh" << std::endl;
 		Attribute &att = dev_attr->get_attr_by_name(names[i]);
 		long type = att.get_data_type();
 
@@ -1385,14 +1403,18 @@ void Device_3Impl::read_attributes_from_cache(const Tango::DevVarStringArray& na
 		}
 		catch (Tango::DevFailed &e)
 		{
-			if (aid.data_5 != nullptr)
+			cout4 << "-----------zzzzzzzzzzzzzzzzzzzzzzzz" << std::endl;
+			if (aid.data_5 != nullptr) {
+				cout4 << "-----------zzzzzzzzzzzzzzzzzzzzzzzz000000" << std::endl;
 				error_from_devfailed((*aid.data_5)[i],e,names[i]);
+			}
 			else if (aid.data_4 != nullptr)
 				error_from_devfailed((*aid.data_4)[i],e,names[i]);
 			else
 				error_from_devfailed((*aid.data_3)[i],e,names[i]);
 		}
 	}
+	cout4 << "-----------eeend" << std::endl;
 }
 
 
