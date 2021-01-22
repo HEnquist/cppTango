@@ -2645,6 +2645,7 @@ Tango::AttributeValueList *DeviceImpl::read_attributes(const Tango::DevVarString
                 real_names.length(nb_dev_attr);
                 for (i = 0; i < nb_dev_attr; i++)
                 {
+                    // TODO handle this
                     real_names[i] = dev_attr->get_attr_by_ind(i).get_name().c_str();
                 }
             }
@@ -2672,18 +2673,19 @@ Tango::AttributeValueList *DeviceImpl::read_attributes(const Tango::DevVarString
 //
 
         nb_names = real_names.length();
-        std::vector<long> wanted_attr;
-        std::vector<long> wanted_w_attr;
+        std::vector<Attribute> wanted_attr;
+        std::vector<Attribute> wanted_w_attr;
 
         for (i = 0; i < nb_names; i++)
         {
-            long j = dev_attr->get_attr_ind_by_name(real_names[i]);
-            if ((dev_attr->get_attr_by_ind(j).get_writable() == Tango::READ_WRITE) ||
-                (dev_attr->get_attr_by_ind(j).get_writable() == Tango::READ_WITH_WRITE))
+            //long j = dev_attr->get_attr_ind_by_name(real_names[i]);
+            Attribute &att = get_attr_by_name(names[i]);
+            if ((att.get_writable() == Tango::READ_WRITE) ||
+                (att.get_writable() == Tango::READ_WITH_WRITE))
             {
-                wanted_w_attr.push_back(j);
-                wanted_attr.push_back(j);
-                Attribute &att = dev_attr->get_attr_by_ind(wanted_attr.back());
+                wanted_w_attr.push_back(att);
+                wanted_attr.push_back(att);
+                //Attribute &att = dev_attr->get_attr_by_ind(wanted_attr.back());
                 Tango::AttrDataFormat format_type = att.get_data_format();
                 if ((format_type == Tango::SPECTRUM) || (format_type == Tango::IMAGE))
                 {
@@ -2700,10 +2702,10 @@ Tango::AttributeValueList *DeviceImpl::read_attributes(const Tango::DevVarString
             }
             else
             {
-                if (dev_attr->get_attr_by_ind(j).get_writable() == Tango::WRITE)
+                if (att.get_writable() == Tango::WRITE)
                 {
-                    wanted_w_attr.push_back(j);
-                    Attribute &att = dev_attr->get_attr_by_ind(wanted_w_attr.back());
+                    wanted_w_attr.push_back(att);
+                    //Attribute &att = dev_attr->get_attr_by_ind(wanted_w_attr.back());
                     Tango::AttrDataFormat format_type = att.get_data_format();
                     if ((format_type == Tango::SPECTRUM) || (format_type == Tango::IMAGE))
                     {
@@ -2718,8 +2720,8 @@ Tango::AttributeValueList *DeviceImpl::read_attributes(const Tango::DevVarString
                 }
                 else
                 {
-                    wanted_attr.push_back(j);
-                    Attribute &att = dev_attr->get_attr_by_ind(wanted_attr.back());
+                    wanted_attr.push_back(att);
+                    //Attribute &att = dev_attr->get_attr_by_ind(wanted_attr.back());
                     att.set_value_flag(false);
                     att.get_when().tv_sec = 0;
                 }
@@ -2738,10 +2740,10 @@ Tango::AttributeValueList *DeviceImpl::read_attributes(const Tango::DevVarString
 // Read the hardware for readable attribute
 //
 
-        if (nb_wanted_attr != 0)
-        {
-            read_attr_hardware(wanted_attr);
-        }
+        //if (nb_wanted_attr != 0)
+        //{
+        //    read_attr_hardware(wanted_attr); //HERE
+        //}
 
 //
 // Set attr value (for readable attribute)
@@ -2753,11 +2755,11 @@ Tango::AttributeValueList *DeviceImpl::read_attributes(const Tango::DevVarString
         {
             if (vers < 3)
             {
-                read_attr(dev_attr->get_attr_by_ind(wanted_attr[i]));
+                read_attr(wanted_attr[i]);
             }
             else
             {
-                Attribute &att = dev_attr->get_attr_by_ind(wanted_attr[i]);
+                Attribute &att = wanted_attr[i];
                 long idx = att.get_attr_idx();
                 if (idx == -1)
                 {
@@ -2792,11 +2794,11 @@ Tango::AttributeValueList *DeviceImpl::read_attributes(const Tango::DevVarString
 
         for (i = 0; i < nb_wanted_w_attr; i++)
         {
-            Tango::AttrWriteType w_type = dev_attr->get_attr_by_ind(wanted_w_attr[i]).get_writable();
+            Tango::AttrWriteType w_type = wanted_w_attr[i].get_writable();
             if ((w_type == Tango::READ_WITH_WRITE) ||
                 (w_type == Tango::WRITE))
             {
-                dev_attr->get_attr_by_ind(wanted_w_attr[i]).set_rvalue();
+                wanted_w_attr[i].set_rvalue();
             }
         }
 
@@ -2823,7 +2825,7 @@ Tango::AttributeValueList *DeviceImpl::read_attributes(const Tango::DevVarString
 
         for (i = 0; i < nb_names; i++)
         {
-            Attribute &att = dev_attr->get_attr_by_name(real_names[i]);
+            Attribute &att = get_attr_by_name(real_names[i]);
             Tango::AttrQuality qual = att.get_quality();
             if (qual != Tango::ATTR_INVALID)
             {
@@ -2833,7 +2835,7 @@ Tango::AttributeValueList *DeviceImpl::read_attributes(const Tango::DevVarString
                     delete back;
                     for (long j = 0; j < i; j++)
                     {
-                        att = dev_attr->get_attr_by_name(real_names[j]);
+                        att = get_attr_by_name(real_names[j]);
                         att.delete_seq();
                     }
 

@@ -338,8 +338,10 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 //
 
 		long nb_names = names.length();
-		std::vector<AttIdx> wanted_attr;
-		std::vector<AttIdx> wanted_w_attr;
+		std::vector<AttIdx> wanted_attidx;
+		std::vector<AttIdx> wanted_w_attidx;
+		std::vector<Attribute> wanted_attr;
+        std::vector<Attribute> wanted_w_attr;
 		bool state_wanted = false;
 		bool status_wanted = false;
 		long state_idx,status_idx;
@@ -352,13 +354,15 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 			AttIdx x;
 			x.idx_in_names = i;
 			std::string att_name(names[i]);
+			Attribute &att = get_attr_by_name(names[i]);
 			std::transform(att_name.begin(),att_name.end(),att_name.begin(),::tolower);
 
 			if (att_name == "state")
 			{
 				x.idx_in_multi_attr = -1;
 				x.failed = false;
-				wanted_attr.push_back(x);
+				wanted_attr.push_back(att);
+				wanted_attidx.push_back(x);
 				state_wanted = true;
 				state_idx = i;
 			}
@@ -366,7 +370,8 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 			{
 				x.idx_in_multi_attr = -1;
 				x.failed = false;
-				wanted_attr.push_back(x);
+				wanted_attr.push_back(att);
+				wanted_attidx.push_back(x);
 				status_wanted = true;
 				status_idx = i;
 			}
@@ -388,8 +393,10 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 						//Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
 						if(att.is_startup_exception())
 							att.throw_startup_exception("Device_3Impl::read_attributes_no_except()");
-						wanted_w_attr.push_back(x);
-						wanted_attr.push_back(x);
+						wanted_w_attr.push_back(att);
+						wanted_attr.push_back(att);
+						wanted_w_attidx.push_back(x);
+						wanted_attidx.push_back(x);
 						att.get_when().tv_sec = 0;
                         att.save_alarm_quality();
 					}
@@ -411,7 +418,8 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 								//Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
 								if(att.is_startup_exception())
 									att.throw_startup_exception("Device_3Impl::read_attributes_no_except()");
-								wanted_attr.push_back(x);
+								wanted_attr.push_back(att);
+								wanted_attidx.push_back(x);
 								att.get_when().tv_sec = 0;
 								att.save_alarm_quality();
 							}
@@ -422,7 +430,8 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 								//Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
 								if(att.is_startup_exception())
 									att.throw_startup_exception("Device_3Impl::read_attributes_no_except()");
-								wanted_w_attr.push_back(x);
+								wanted_w_attr.push_back(att);
+								wanted_w_attidx.push_back(x);
 							}
 						}
 						else
@@ -433,7 +442,8 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 							//Attribute &att = dev_attr->get_attr_by_ind(x.idx_in_multi_attr);
 							if(att.is_startup_exception())
 								att.throw_startup_exception("Device_3Impl::read_attributes_no_except()");
-							wanted_attr.push_back(x);
+							wanted_attr.push_back(att);
+							wanted_attidx.push_back(x);
 							att.get_when().tv_sec = 0;
                             att.save_alarm_quality();
 						}
@@ -477,7 +487,7 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 			std::vector<long> tmp_idx;
 			for (i = 0;i < nb_wanted_attr;i++)
 			{
-				long ii = wanted_attr[i].idx_in_multi_attr;
+				long ii = wanted_attidx[i].idx_in_multi_attr;
 				if (ii != -1)
 					tmp_idx.push_back(ii);
 			}
@@ -497,26 +507,27 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 
 		for (i = 0;i < nb_wanted_attr;i++)
 		{
-			if (wanted_attr[i].idx_in_multi_attr != -1)
+			if (true) //(wanted_attr[i].idx_in_multi_attr != -1)
 			{
-				Attribute &att = dev_attr->get_attr_by_ind(wanted_attr[i].idx_in_multi_attr);
+				//Attribute &att = dev_attr->get_attr_by_ind(wanted_attr[i].idx_in_multi_attr);
+				Attribute &att = wanted_attr[i];
 				bool is_allowed_failed = false;
 
 				try
 				{
 					std::vector<Tango::Attr *> &attr_vect = device_class->get_class_attr()->get_attr_list();
-					if (attr_vect[att.get_attr_idx()]->is_allowed(this,Tango::READ_REQ) == false)
-					{
-						is_allowed_failed = true;
-						TangoSys_OMemStream o;
-
-						o << "It is currently not allowed to read attribute ";
-						o << att.get_name() << std::ends;
-
-						Except::throw_exception((const char *)API_AttrNotAllowed,
-					        			o.str(),
-					        			(const char *)"Device_3Impl::read_attributes_no_except");
-					}
+					//if (attr_vect[att.get_attr_idx()]->is_allowed(this,Tango::READ_REQ) == false)
+					//{
+					//	is_allowed_failed = true;
+					//	TangoSys_OMemStream o;
+//
+					//	o << "It is currently not allowed to read attribute ";
+					//	o << att.get_name() << std::ends;
+//
+					//	Except::throw_exception((const char *)API_AttrNotAllowed,
+					//        			o.str(),
+					//        			(const char *)"Device_3Impl::read_attributes_no_except");
+					//}
 
 //
 // Take the attribute mutex before calling the user read method
@@ -565,11 +576,11 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 				{
 					long index;
 					if (second_try == false)
-						index = wanted_attr[i].idx_in_names;
+						index = wanted_attidx[i].idx_in_names;
 					else
-						index = idx[wanted_attr[i].idx_in_names];
+						index = idx[wanted_attidx[i].idx_in_names];
 
-					wanted_attr[i].failed = true;
+					//wanted_attr[i].failed = true;
 
 					if (aid.data_5 != nullptr)
 					{
@@ -579,7 +590,7 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 							omni_mutex *attr_mut = att.get_attr_mutex();
 							attr_mut->unlock();
 						}
-						error_from_devfailed((*aid.data_5)[index],e,names[wanted_attr[i].idx_in_names]);
+						error_from_devfailed((*aid.data_5)[index],e,names[wanted_attidx[i].idx_in_names]);
 					}
 					else if (aid.data_4 != nullptr)
 					{
@@ -589,20 +600,20 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 							omni_mutex *attr_mut = att.get_attr_mutex();
 							attr_mut->unlock();
 						}
-						error_from_devfailed((*aid.data_4)[index],e,names[wanted_attr[i].idx_in_names]);
+						error_from_devfailed((*aid.data_4)[index],e,names[wanted_attidx[i].idx_in_names]);
 					}
 					else
-						error_from_devfailed((*aid.data_3)[index],e,names[wanted_attr[i].idx_in_names]);
+						error_from_devfailed((*aid.data_3)[index],e,names[wanted_attidx[i].idx_in_names]);
 				}
 				catch (...)
 				{
 					long index;
 					if (second_try == false)
-						index = wanted_attr[i].idx_in_names;
+						index = wanted_attidx[i].idx_in_names;
 					else
-						index = idx[wanted_attr[i].idx_in_names];
+						index = idx[wanted_attidx[i].idx_in_names];
 
-					wanted_attr[i].failed = true;
+					wanted_attidx[i].failed = true;
 					Tango::DevErrorList del;
 					del.length(1);
 
@@ -619,7 +630,7 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 							omni_mutex *attr_mut = att.get_attr_mutex();
 							attr_mut->unlock();
 						}
-						error_from_errorlist((*aid.data_5)[index],del,names[wanted_attr[i].idx_in_names]);
+						error_from_errorlist((*aid.data_5)[index],del,names[wanted_attidx[i].idx_in_names]);
 					}
 					else if (aid.data_4 != nullptr)
 					{
@@ -629,10 +640,10 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 							omni_mutex *attr_mut = att.get_attr_mutex();
 							attr_mut->unlock();
 						}
-						error_from_errorlist((*aid.data_4)[index],del,names[wanted_attr[i].idx_in_names]);
+						error_from_errorlist((*aid.data_4)[index],del,names[wanted_attidx[i].idx_in_names]);
 					}
 					else
-						error_from_errorlist((*aid.data_3)[index],del,names[wanted_attr[i].idx_in_names]);
+						error_from_errorlist((*aid.data_3)[index],del,names[wanted_attidx[i].idx_in_names]);
 				}
 			}
 		}
@@ -643,7 +654,7 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 
 		for (i = 0;i < nb_wanted_w_attr;i++)
 		{
-			Attribute &att = dev_attr->get_attr_by_ind(wanted_w_attr[i].idx_in_multi_attr);
+			Attribute &att = dev_attr->get_attr_by_ind(wanted_w_attidx[i].idx_in_multi_attr);
 			Tango::AttrWriteType w_type = att.get_writable();
 			try
 			{
@@ -668,11 +679,11 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 			{
 				long index;
 				if (second_try == false)
-					index = wanted_w_attr[i].idx_in_names;
+					index = wanted_w_attidx[i].idx_in_names;
 				else
-					index = idx[wanted_w_attr[i].idx_in_names];
+					index = idx[wanted_w_attidx[i].idx_in_names];
 
-				wanted_w_attr[i].failed = true;
+				wanted_w_attidx[i].failed = true;
 				AttrSerialModel atsm = att.get_attr_serial_model();
 
 				if (aid.data_5 != nullptr)
@@ -683,7 +694,7 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 						omni_mutex *attr_mut = (atsm == ATTR_BY_KERNEL) ? att.get_attr_mutex() : att.get_user_attr_mutex();
 						attr_mut->unlock();
 					}
-					error_from_devfailed((*aid.data_5)[index],e,names[wanted_w_attr[i].idx_in_names]);
+					error_from_devfailed((*aid.data_5)[index],e,names[wanted_w_attidx[i].idx_in_names]);
 				}
 				else if (aid.data_4 != nullptr)
 				{
@@ -693,10 +704,10 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
 						omni_mutex *attr_mut = (atsm == ATTR_BY_KERNEL) ? att.get_attr_mutex() : att.get_user_attr_mutex();
 						attr_mut->unlock();
 					}
-					error_from_devfailed((*aid.data_4)[index],e,names[wanted_w_attr[i].idx_in_names]);
+					error_from_devfailed((*aid.data_4)[index],e,names[wanted_w_attidx[i].idx_in_names]);
 				}
 				else
-					error_from_devfailed((*aid.data_3)[index],e,names[wanted_w_attr[i].idx_in_names]);
+					error_from_devfailed((*aid.data_3)[index],e,names[wanted_w_attidx[i].idx_in_names]);
 			}
 		}
 
@@ -717,7 +728,7 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
             {
                 try
                 {
-                    alarmed_not_read(wanted_attr);
+                    alarmed_not_read(wanted_attidx);
                     state_from_read = true;
                     if (is_alarm_state_forced() == true)
                         d_state = DeviceImpl::dev_state();
@@ -739,11 +750,11 @@ void Device_3Impl::read_attributes_no_except(const Tango::DevVarStringArray& nam
             else
             {
                 if (aid.data_5 != nullptr)
-                    error_from_errorlist((*aid.data_5)[state_idx],(*aid.data_5)[wanted_attr[id].idx_in_names].err_list,names[state_idx]);
+                    error_from_errorlist((*aid.data_5)[state_idx],(*aid.data_5)[wanted_attidx[id].idx_in_names].err_list,names[state_idx]);
                 else if (aid.data_4 != nullptr)
-                    error_from_errorlist((*aid.data_4)[state_idx],(*aid.data_4)[wanted_attr[id].idx_in_names].err_list,names[state_idx]);
+                    error_from_errorlist((*aid.data_4)[state_idx],(*aid.data_4)[wanted_attidx[id].idx_in_names].err_list,names[state_idx]);
                 else
-                    error_from_errorlist((*aid.data_3)[state_idx],(*aid.data_3)[wanted_attr[id].idx_in_names].err_list,names[state_idx]);
+                    error_from_errorlist((*aid.data_3)[state_idx],(*aid.data_3)[wanted_attidx[id].idx_in_names].err_list,names[state_idx]);
             }
 		}
 

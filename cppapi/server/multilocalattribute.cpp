@@ -129,6 +129,7 @@ MultiLocalAttribute::MultiLocalAttribute(std::string &dev_name,DeviceClass *dev_
                 old_db_timeout = tg->get_database()->get_timeout_millis();
 			try
 			{
+				cout4 << "--------------MultiLocalAttribute::MultiLocalAttribute aaa" << std::endl;
 			    if (old_db_timeout != 0)
                     tg->get_database()->set_timeout_millis(6000);
 				tg->get_database()->get_device_attribute_property(dev_name,db_list,tg->get_db_cache());
@@ -137,6 +138,7 @@ MultiLocalAttribute::MultiLocalAttribute(std::string &dev_name,DeviceClass *dev_
 			}
 			catch (Tango::DevFailed &)
 			{
+				cout4 << "--------------MultiLocalAttribute::MultiLocalAttribute aaa11" << std::endl;
 			    cout4 << "Exception while accessing database" << std::endl;
 
 				tg->get_database()->set_timeout_millis(old_db_timeout);
@@ -160,20 +162,20 @@ MultiLocalAttribute::MultiLocalAttribute(std::string &dev_name,DeviceClass *dev_
 
 		for (i = 0;i < nb_attr;i++)
 		{
-
+			cout4 << "--------------MultiLocalAttribute::MultiLocalAttribute abbb" << std::endl;
 //
 // Get attribute class properties
 //
 
 			Attr &attr = dev_class_ptr->get_class_attr()->get_attr(tmp_attr_list[i]->get_name());
-			std::vector<AttrProperty> &class_prop = attr.get_class_properties();
+			//std::vector<AttrProperty> &class_prop = attr.get_class_properties();
 			std::vector<AttrProperty> &def_user_prop = attr.get_user_default_properties();
 
 //
 // If the attribute has some properties defined at device level, build a vector of these properties
 //
 
-			std::vector<AttrProperty> dev_prop;
+			std::vector<AttrProperty> prop_list;
 
 			if (tg->_UseDb == true)
 			{
@@ -192,10 +194,10 @@ MultiLocalAttribute::MultiLocalAttribute(std::string &dev_name,DeviceClass *dev_
 							tmp = tmp + ",";
 							tmp = tmp + db_list[ind].value_string[k];
 						}
-						dev_prop.push_back(AttrProperty(db_list[ind].name,tmp));
+						prop_list.push_back(AttrProperty(db_list[ind].name,tmp));
 					}
 					else
-						dev_prop.push_back(AttrProperty(db_list[ind].name,db_list[ind].value_string[0]));
+						prop_list.push_back(AttrProperty(db_list[ind].name,db_list[ind].value_string[0]));
 					ind++;
 				}
 			}
@@ -204,9 +206,9 @@ MultiLocalAttribute::MultiLocalAttribute(std::string &dev_name,DeviceClass *dev_
 // Concatenate these two attribute properties levels
 //
 
-			std::vector<AttrProperty> prop_list;
+			//std::vector<AttrProperty> prop_list;
 			bool fwd_ok = true;
-			concat(dev_prop,class_prop,prop_list);
+			//concat(dev_prop,class_prop,prop_list);
 
 			if (attr.is_fwd() == false)
 			{
@@ -758,7 +760,7 @@ void MultiLocalAttribute::add_attribute(std::string &dev_name,DeviceClass *dev_c
     //std::vector<Attr *> &temp_attr_list = local_attr_list->get_attr_list();
     Attr &attr = *temp_attr_list[index];
 	//std::vector<AttrProperty> &class_prop = attr.get_class_properties();
-	//std::vector<AttrProperty> &def_user_prop = attr.get_user_default_properties();
+	std::vector<AttrProperty> &def_user_prop = attr.get_user_default_properties();
 
 //
 // If the attribute has some properties defined at device level, build a vector of these properties
@@ -799,8 +801,8 @@ void MultiLocalAttribute::add_attribute(std::string &dev_name,DeviceClass *dev_c
 	cout4 << "------------dddddddddddddddddddd" << std::endl;
 	//std::vector<AttrProperty> prop_list;
 	//concat(dev_prop,class_prop,prop_list);
-	//add_user_default(prop_list,def_user_prop);
-	//add_default(prop_list,dev_name,attr.get_name(),attr.get_type());
+	add_user_default(prop_list,def_user_prop);
+	add_default(prop_list,dev_name,attr.get_name(),attr.get_type());
 
 //
 // Create an Attribute instance and insert it in the attribute list. If the device implement IDL 3
